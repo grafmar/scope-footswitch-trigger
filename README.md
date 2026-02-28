@@ -5,6 +5,11 @@ The Arduino detects short and long presses on two foot pedals and sends events v
 
 This setup is ideal for lab environments where both hands are occupied — for example during probing, debugging hardware, or EMC measurements.
 
+## Usage
+<p align="center">
+  <img src="doc/device_overview.png" width="80%" title="Device overview"  alt="accessibility text">
+</p>
+
 ## 🔧 System Overview
 
 ### Hardware
