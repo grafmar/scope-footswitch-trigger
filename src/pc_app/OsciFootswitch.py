@@ -1,7 +1,6 @@
 import sys
 import threading
 import queue
-import time
 
 import serial
 import serial.tools.list_ports
@@ -10,10 +9,12 @@ import pyvisa
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QVBoxLayout,
     QHBoxLayout, QComboBox, QLineEdit, QCheckBox, QTextEdit,
-    QTableWidget, QTableWidgetItem, QHeaderView
+    QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog,
+    QSizePolicy
 )
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QByteArray
+from PySide6.QtGui import QPixmap
 
 # ----------------------------
 # Serial Reader Thread
@@ -60,37 +61,93 @@ class ScopeController:
     def identify(self, enable: bool):
         if enable:
             self.scope.write(':SYST:DSP "FOOT SWITCH\nIDENTIFIER"')
-            # self.log("OSC -> IDENTIFY ON")
         else:
             self.scope.write(':SYST:DSP ""')
-            # self.log("OSC -> IDENTIFY OFF")
 
     def run(self):
         self.scope.write(":RUN")
-        # self.log("OSC -> RUN")
         self.running = True
 
     def stop(self):
         self.scope.write(":STOP")
-        # self.log("OSC -> STOP")
         self.running = False
 
     def single(self):
         self.scope.write(":SINGLE")
-        # self.log("OSC -> SINGLE")
 
     def trigger_auto(self):
         self.scope.write(":TRIG:MODE AUTO")
-        # self.log("OSC -> TRIG:MODE AUTO")
 
     def trigger_normal(self):
         self.scope.write(":TRIG:MODE NORM")
-        # self.log("OSC -> TRIG:MODE NORM")
 
-    def force_trigger(self):
-        # self.scope.write(":TRIG:FORC")
-        self.scope.write("*TRG")
-        # self.log("OSC -> TRIG:FORC")
+    # ---------- Screenshot / Setup ----------
+
+    def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
+        """
+        color: True  -> COLor
+            False -> GRAYscale
+        inverted: True / False -> HARDcopy:INKSaver
+        """
+
+        palette = "COLor" if color else "GRAYscale"
+        inksaver = "ON" if inverted else "OFF"
+
+        # ---------- Binary mode ----------
+        self.scope.write_termination = ''
+        self.scope.read_termination = ''
+        old_timeout = self.scope.timeout
+        self.scope.timeout = 10000
+
+        # ---------- Apply InkSaver ----------
+        self.scope.write(f":HARDcopy:INKSaver {inksaver}")
+
+        # ---------- Request screen dump ----------
+        self.scope.write(f":DISPlay:DATA? PNG,SCReen,{palette}")
+        raw = self.scope.read_raw()
+
+        # ---------- Restore ASCII mode ----------
+        self.scope.write_termination = '\n'
+        self.scope.read_termination = '\n'
+        self.scope.timeout = old_timeout
+
+        # ---------- Strip IEEE-488.2 binary header ----------
+        if raw.startswith(b"#"):
+            n = int(raw[1:2])
+            length = int(raw[2:2 + n])
+            data = raw[2 + n:2 + n + length]
+        else:
+            data = raw
+
+        return data
+        
+    def save_setup(self, filename: str):
+        # --- Binary mode ---
+        self.scope.write_termination = ''
+        self.scope.read_termination = ''
+        old_timeout = self.scope.timeout
+        self.scope.timeout = 5000
+
+        # --- Request setup ---
+        self.scope.write(":SYSTem:SETup?")
+        raw = self.scope.read_raw()
+
+        # --- Restore ASCII mode ---
+        self.scope.write_termination = '\n'
+        self.scope.read_termination = '\n'
+        self.scope.timeout = old_timeout
+
+        # --- Strip IEEE-488.2 binary header ---
+        if raw.startswith(b"#"):
+            n = int(raw[1:2])
+            length = int(raw[2:2 + n])
+            data = raw[2 + n:2 + n + length]
+        else:
+            data = raw
+
+        # --- Save as binary ---
+        with open(filename, "wb") as f:
+            f.write(data)
 
 # ----------------------------
 # Serial ports dropdown
@@ -138,9 +195,6 @@ class MainWindow(QWidget):
 
         layout.addLayout(osc_layout)
 
-        self.idn_label = QLabel("IDN: not connected")
-        layout.addWidget(self.idn_label)
-
         self.identify_cb = QCheckBox("Identify Oscilloscope")
         self.identify_cb.toggled.connect(self.identify_scope)
         layout.addWidget(self.identify_cb)
@@ -148,7 +202,6 @@ class MainWindow(QWidget):
         # --- Serial config ---
         ser_layout = QHBoxLayout()
         ser_layout.addWidget(QLabel("Serial Port:"))
-        # self.serial_combo = QComboBox()
         self.serial_combo = SerialPortComboBox(self.refresh_serial_ports)
         ser_layout.addWidget(self.serial_combo)
 
@@ -159,53 +212,101 @@ class MainWindow(QWidget):
         layout.addLayout(ser_layout)
 
         # --- Footswitch Table ---
-        self.table = QTableWidget(2, 2)  # 2 Zeilen, 2 Spalten
+        self.table = QTableWidget(2, 2)
         self.table.setHorizontalHeaderLabels(["B1 (Left)", "B2 (Right)"])
         self.table.setVerticalHeaderLabels(["Short", "Long"])
-        self.table.setEditTriggers(QTableWidget.NoEditTriggers)  # Nur Anzeige
-        self.table.setFixedHeight(80)  # optional: Höhe anpassen
-        self.table.setFixedWidth(400)  # optional
-
-        # Werte eintragen
-        self.table.setItem(0, 0, QTableWidgetItem("RUN ↔ STOP"))              # B1S
-        self.table.setItem(0, 1, QTableWidgetItem("TRIGGER NORMAL, SINGLE"))  # B2S
-        self.table.setItem(1, 0, QTableWidgetItem("TRIGGER AUTO, RUN"))       # B1L
-        self.table.setItem(1, 1, QTableWidgetItem("TRIGGER AUTO, SINGLE"))    # B2L
-
-        layout.addWidget(self.table)
-
-        # --- Tabelle stylen ---
-        # Nicht selektierbar
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionMode(QTableWidget.NoSelection)
         self.table.setFocusPolicy(Qt.NoFocus)
 
-        # Spaltenbreite automatisch an Text anpassen
+        self.table.setItem(0, 0, QTableWidgetItem("RUN ↔ STOP"))
+        self.table.setItem(0, 1, QTableWidgetItem("TRIGGER NORMAL, SINGLE"))
+        self.table.setItem(1, 0, QTableWidgetItem("TRIGGER AUTO, RUN"))
+        self.table.setItem(1, 1, QTableWidgetItem("TRIGGER AUTO, SINGLE"))
+
         self.table.resizeColumnsToContents()
         self.table.resizeRowsToContents()
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.table.verticalHeader().setDefaultSectionSize(30)
 
-        # Schriftgröße
-        self.table.setStyleSheet("QTableWidget { font-size: 12pt; }")
+        layout.addWidget(self.table)
+
+        # Tabelle fixieren (keine vertikale Skalierung)
+        self.table.setFixedHeight(80)  # passt für 2 Zeilen
+        self.table.setFixedWidth(400)
+        self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # --- Screenshot Controls ---
+        shot_layout = QHBoxLayout()
+
+        # Preview Screenshot
+        self.preview_btn = QPushButton("Preview")
+        self.preview_btn.clicked.connect(self.preview_screenshot)
+        self.preview_btn.setMinimumHeight(50)  # doppelte Höhe
+        self.preview_btn.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        shot_layout.addWidget(self.preview_btn)
+
+        # Save PNG + Setup
+        self.save_btn = QPushButton("Save PNG + Setup")
+        self.save_btn.clicked.connect(self.save_screenshot_and_setup)
+        self.save_btn.setMinimumHeight(50)
+        self.save_btn.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        shot_layout.addWidget(self.save_btn)
+
+        # Load Setup
+        self.load_setup_btn = QPushButton("Load Setup")
+        self.load_setup_btn.clicked.connect(self.load_setup)
+        self.load_setup_btn.setMinimumHeight(50)
+        self.load_setup_btn.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        shot_layout.addWidget(self.load_setup_btn)
+
+        # Spacer, damit rechts nichts wackelt
+        shot_layout.addStretch()
+
+        # --- Color / Invert Checkboxes rechts, enger zusammen ---
+        cb_layout = QHBoxLayout()
+        self.color_cb = QCheckBox("Color")
+        self.color_cb.setChecked(True)
+        cb_layout.addWidget(self.color_cb)
+
+        self.invert_cb = QCheckBox("Inverted")
+        cb_layout.addWidget(self.invert_cb)
+
+        cb_layout.setSpacing(5)  # enger zusammen
+        shot_layout.addLayout(cb_layout)
+
+        layout.addLayout(shot_layout)
+
+        # --- Preview Label ---
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setFixedSize(768, 622)  # 4:3 Verhältnis, größer in Y
+        self.image_label.setStyleSheet("border: 1px solid gray; background-color: gray;")
+        layout.addWidget(self.image_label)
 
         # --- Log ---
         self.log = QTextEdit()
         self.log.setReadOnly(True)
+        self.log.setFixedHeight(6 * 20)  # 6 Zeilen à ca. 20px pro Zeile
+        self.log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         layout.addWidget(self.log)
 
         self.setLayout(layout)
 
+    # ---------- Helpers ----------
+
     def refresh_serial_ports(self):
         self.serial_combo.clear()
         for port in serial.tools.list_ports.comports():
-            text = f"{port.device} - {port.description}"
-            self.serial_combo.addItem(text, port.device)
+            self.serial_combo.addItem(
+                f"{port.device} - {port.description}", port.device
+            )
+
+    # ---------- Scope Actions ----------
 
     def connect_scope(self):
         try:
             idn = self.scope.connect(self.ip_edit.text())
-            self.idn_label.setText(f"IDN: {idn.strip()}")
             self.log_msg(f"Connected to scope: {idn.strip()}")
         except Exception as e:
             self.log_msg(str(e))
@@ -213,7 +314,6 @@ class MainWindow(QWidget):
     def identify_scope(self, checked: bool):
         try:
             self.scope.identify(checked)
-            self.log_msg(f"OSC -> Identify {checked}")
         except Exception as e:
             self.log_msg(str(e))
 
@@ -223,14 +323,102 @@ class MainWindow(QWidget):
         self.serial_thread.start()
         self.log_msg(f"Opened serial {port}")
 
+    def closeEvent(self, event):
+        if self.serial_thread:
+            self.serial_thread.stop()
+        event.accept()
+
+    # ---------- Screenshot ----------
+
+    def update_preview_from_png(self, data: bytes):
+        pixmap = QPixmap()
+        pixmap.loadFromData(data, "PNG")
+
+        self.image_label.setPixmap(
+            pixmap.scaled(
+                self.image_label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation,
+            )
+        )
+
+    def preview_screenshot(self):
+        try:
+            data = self.scope.get_screenshot_png(
+                color=self.color_cb.isChecked(),
+                inverted=self.invert_cb.isChecked(),
+            )
+
+            self.update_preview_from_png(data)
+            self.log_msg("Screenshot preview updated")
+
+        except Exception as e:
+            self.log_msg(str(e))
+
+    def save_screenshot_and_setup(self):
+        try:
+            filename, _ = QFileDialog.getSaveFileName(
+                self, "Save Screenshot", "", "PNG Image (*.png)"
+            )
+            if not filename:
+                return
+            if not filename.lower().endswith(".png"):
+                filename += ".png"
+
+            # --- Screenshot EINMAL holen ---
+            data = self.scope.get_screenshot_png(
+                color=self.color_cb.isChecked(),
+                inverted=self.invert_cb.isChecked(),
+            )
+
+            # --- Preview aktualisieren ---
+            self.update_preview_from_png(data)
+
+            # --- PNG speichern ---
+            with open(filename, "wb") as f:
+                f.write(data)
+
+            # --- Setup speichern ---
+            setup_file = filename.replace(".png", ".set")
+            self.scope.save_setup(setup_file)
+
+            self.log_msg(f"Saved screenshot and updated preview: {filename}")
+
+        except Exception as e:
+            self.log_msg(str(e))
+
+    def load_setup(self):
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Load Setup", "", "Setup Files (*.set *.bin)"
+        )
+        if not filename:
+            return
+        try:
+            with open(filename, "rb") as f:
+                data = f.read()
+
+            # Binary Setup wiederherstellen
+            header = f"#{len(str(len(data)))}{len(data)}".encode()
+            payload = header + data
+
+            self.scope.write_termination = ''
+            self.scope.read_termination = ''
+            self.scope.write_raw(":SYSTem:SETup ", payload)
+            self.scope.write_termination = '\n'
+            self.scope.read_termination = '\n'
+
+            self.log_msg(f"Setup loaded: {filename}")
+
+        except Exception as e:
+            self.log_msg(f"Failed to load setup: {e}")
+
+    # ---------- Event Handling ----------
+
     def process_events(self):
         while not self.event_queue.empty():
-            event = self.event_queue.get()
-            # self.log_msg(f"Event: {event}")
-            self.handle_event(event)
+            self.handle_event(self.event_queue.get())
 
     def handle_event(self, event):
-        # Expected events: B1S, B1L, B2S, B2L
         try:
             if event == "B1S":
                 if self.scope.running:
@@ -253,7 +441,7 @@ class MainWindow(QWidget):
             elif event == "B2L":
                 self.scope.trigger_auto()
                 self.scope.single()
-                self.log_msg(f"Event {event}: TRIGGER AUTO, SINGLE (FORCE TRIGGER)")
+                self.log_msg(f"Event {event}: TRIGGER AUTO, SINGLE")
 
         except Exception as e:
             self.log_msg(str(e))
@@ -267,6 +455,6 @@ class MainWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.resize(600, 400)
+    win.resize(800, 650)
     win.show()
     sys.exit(app.exec())
