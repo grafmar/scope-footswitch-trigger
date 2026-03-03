@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from PySide6.QtCore import Qt, QTimer, QByteArray
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QFont
 
 # ----------------------------
 # Serial Reader Thread
@@ -212,29 +212,66 @@ class MainWindow(QWidget):
 
         layout.addLayout(ser_layout)
 
+
         # --- Footswitch Table ---
-        self.table = QTableWidget(2, 2)
-        self.table.setHorizontalHeaderLabels(["B1 (Left)", "B2 (Right)"])
+        self.table = QTableWidget(2, 3)
+        self.table.setHorizontalHeaderLabels(["B1 (Left)", "B1+B2 (Both)", "B2 (Right)"])
         self.table.setVerticalHeaderLabels(["Short", "Long"])
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionMode(QTableWidget.NoSelection)
         self.table.setFocusPolicy(Qt.NoFocus)
 
-        self.table.setItem(0, 0, QTableWidgetItem("RUN ↔ STOP"))
-        self.table.setItem(0, 1, QTableWidgetItem("TRIGGER NORMAL, SINGLE"))
-        self.table.setItem(1, 0, QTableWidgetItem("TRIGGER AUTO, RUN"))
-        self.table.setItem(1, 1, QTableWidgetItem("TRIGGER AUTO, SINGLE"))
+        # -------- Layout behaviour --------
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Stretch)  # alle Spalten gleich breit
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setStyleSheet("""
+        /* Tabelle */
+        QTableWidget {
+            background-color: #f0f0f0;        /* same color as  GUI */
+            gridline-color: #707070;          /* darker Gridlines */
+            border: 1px solid #707070;
+        }
 
-        self.table.resizeColumnsToContents()
-        self.table.resizeRowsToContents()
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        /* Horizontal + Vertical Header */
+        QHeaderView::section {
+            background-color: #c8c8c8;        /* Header gray */
+            color: black;
+            font-weight: bold;
+            border: 0px solid #707070;        /* darker lines also here */
+            border-right: 1px solid #707070;
+            border-bottom: 1px solid #707070;
+        }
+
+        /* Top-Left Corner */
+        QTableCornerButton::section {
+            background-color: #f0f0f0;        /* same color as Header */
+            border: 0px solid #707070;        /* darker lines also here */
+        }
+        """)
+
+        # -------- Schrift fett --------
+        bold_font = QFont()
+        bold_font.setBold(True)
+
+        def set_item(row, col, text):
+            item = QTableWidgetItem(text)
+            item.setTextAlignment(Qt.AlignCenter)  # zentriert
+            item.setFont(bold_font)                # fett
+            self.table.setItem(row, col, item)
+
+        set_item(0, 0, "RUN ↔ STOP")
+        set_item(0, 1, "Preview")
+        set_item(0, 2, "TRIGGER NORMAL, SINGLE")
+        set_item(1, 0, "TRIGGER AUTO, RUN")
+        set_item(1, 1, "Save PNG + Setup")
+        set_item(1, 2, "TRIGGER AUTO, SINGLE")
 
         layout.addWidget(self.table)
 
         # Tabelle fixieren (keine vertikale Skalierung)
         self.table.setFixedHeight(80)  # passt für 2 Zeilen
-        self.table.setFixedWidth(400)
+        self.table.setFixedWidth(768)
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         # --- Screenshot Controls ---
@@ -244,21 +281,21 @@ class MainWindow(QWidget):
         self.preview_btn = QPushButton("Preview")
         self.preview_btn.clicked.connect(self.preview_screenshot)
         self.preview_btn.setMinimumHeight(50)  # doppelte Höhe
-        self.preview_btn.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        self.preview_btn.setStyleSheet("font-size: 14pt; font-weight: bold; padding: 5px 20px;")
         shot_layout.addWidget(self.preview_btn)
 
         # Save PNG + Setup
         self.save_btn = QPushButton("Save PNG + Setup")
         self.save_btn.clicked.connect(self.save_screenshot_and_setup)
         self.save_btn.setMinimumHeight(50)
-        self.save_btn.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        self.save_btn.setStyleSheet("font-size: 14pt; font-weight: bold; padding: 5px 20px;")
         shot_layout.addWidget(self.save_btn)
 
         # Load Setup
         self.load_setup_btn = QPushButton("Load Setup")
         self.load_setup_btn.clicked.connect(self.load_setup)
         self.load_setup_btn.setMinimumHeight(50)
-        self.load_setup_btn.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        self.load_setup_btn.setStyleSheet("font-size: 14pt; font-weight: bold; padding: 5px 20px;")
         shot_layout.addWidget(self.load_setup_btn)
 
         # Spacer, damit rechts nichts wackelt
@@ -281,7 +318,7 @@ class MainWindow(QWidget):
         # --- Preview Label ---
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setFixedSize(768, 622)  # 4:3 Verhältnis, größer in Y
+        self.image_label.setFixedSize(768, 576)  # 4:3 Verhältnis
         self.image_label.setStyleSheet("border: 1px solid gray; background-color: gray;")
         layout.addWidget(self.image_label)
 
@@ -444,6 +481,14 @@ class MainWindow(QWidget):
                 self.scope.single()
                 self.log_msg(f"Event {event}: TRIGGER AUTO, SINGLE")
 
+            elif event == "BBS":
+                self.preview_screenshot()
+                self.log_msg(f"Event {event}: Preview")
+
+            elif event == "BBL":
+                self.save_screenshot_and_setup()
+                self.log_msg(f"Event {event}: Save PNG + Setup")
+
         except Exception as e:
             self.log_msg(str(e))
 
@@ -456,6 +501,6 @@ class MainWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.resize(800, 650)
+    win.resize(700, 650)
     win.show()
     sys.exit(app.exec())
