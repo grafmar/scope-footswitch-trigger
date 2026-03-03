@@ -103,7 +103,8 @@ class ScopeController:
         self.scope.write(f":HARDcopy:INKSaver {inksaver}")
 
         # ---------- Request screen dump ----------
-        self.scope.write(f":DISPlay:DATA? PNG,SCReen,{palette}")
+        # self.scope.write(f":DISPlay:DATA? PNG,SCReen,{palette}")
+        self.scope.write(f":DISPlay:DATA? PNG,{palette}")
         raw = self.scope.read_raw()
 
         # ---------- Restore ASCII mode ----------
