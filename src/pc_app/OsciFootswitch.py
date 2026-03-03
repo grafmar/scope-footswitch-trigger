@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QVBoxLayout,
     QHBoxLayout, QComboBox, QLineEdit, QCheckBox, QTextEdit,
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog,
-    QSizePolicy
+    QSizePolicy, QGridLayout, QFrame
 )
 
 from PySide6.QtCore import Qt, QTimer, QByteArray
@@ -184,34 +184,59 @@ class MainWindow(QWidget):
     def init_ui(self):
         layout = QVBoxLayout()
 
-        # --- Oscilloscope config ---
-        osc_layout = QHBoxLayout()
-        osc_layout.addWidget(QLabel("Scope IP:"))
-        self.ip_edit = QLineEdit("10.53.48.103")
-        osc_layout.addWidget(self.ip_edit)
+        config_layout = QGridLayout()
+        config_layout.setHorizontalSpacing(10)
+        config_layout.setVerticalSpacing(10)
 
+        # ---- Labels (gleich breit) ----
+        label_width = 100
+
+        scope_label = QLabel("Scope IP:")
+        scope_label.setFixedWidth(label_width)
+
+        serial_label = QLabel("Footswitch Port:")  # besser als "Serial Port"
+        serial_label.setFixedWidth(label_width)
+
+        # ---- Scope Row ----
+        self.ip_edit = QLineEdit("10.53.48.103")
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.clicked.connect(self.connect_scope)
-        osc_layout.addWidget(self.connect_btn)
 
-        layout.addLayout(osc_layout)
-
-        self.identify_cb = QCheckBox("Identify Oscilloscope")
+        self.identify_cb = QCheckBox("Identify")
         self.identify_cb.toggled.connect(self.identify_scope)
-        layout.addWidget(self.identify_cb)
 
-        # --- Serial config ---
-        ser_layout = QHBoxLayout()
-        ser_layout.addWidget(QLabel("Serial Port:"))
+        # ---- Serial Row ----
         self.serial_combo = SerialPortComboBox(self.refresh_serial_ports)
-        ser_layout.addWidget(self.serial_combo)
-
         self.open_serial_btn = QPushButton("Open")
         self.open_serial_btn.clicked.connect(self.open_serial)
-        ser_layout.addWidget(self.open_serial_btn)
 
-        layout.addLayout(ser_layout)
+        # ---- Buttons gleich breit ----
+        button_width = 100
+        self.connect_btn.setFixedWidth(button_width)
+        self.open_serial_btn.setFixedWidth(button_width)
 
+        # ---- Inputs gleich breit ----
+        input_width = 220
+        self.ip_edit.setFixedWidth(input_width)
+        self.serial_combo.setFixedWidth(input_width)
+
+        # ---- Grid anordnen ----
+        config_layout.addWidget(scope_label,        0, 0)
+        config_layout.addWidget(self.ip_edit,       0, 1)
+        config_layout.addWidget(self.connect_btn,   0, 2)
+        config_layout.addWidget(self.identify_cb,   0, 3)
+
+        config_layout.addWidget(serial_label,       1, 0)
+        config_layout.addWidget(self.serial_combo,  1, 1)
+        config_layout.addWidget(self.open_serial_btn, 1, 2)
+
+        layout.addLayout(config_layout)
+
+        # ---- Separator ----
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(separator)
 
         # --- Footswitch Table ---
         self.table = QTableWidget(2, 3)
@@ -273,6 +298,12 @@ class MainWindow(QWidget):
         self.table.setFixedHeight(80)  # passt für 2 Zeilen
         self.table.setFixedWidth(768)
         self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # ---- Separator ----
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(separator)
 
         # --- Screenshot Controls ---
         shot_layout = QHBoxLayout()
