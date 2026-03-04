@@ -76,10 +76,13 @@ class ScopeController:
         self.scope.write(":SINGLE")
 
     def trigger_auto(self):
-        self.scope.write(":TRIG:MODE AUTO")
+        self.scope.write(":TRIG:SWE AUTO")
+
+    def trigger_force(self):
+        self.scope.write(":TRIG:FORC")
 
     def trigger_normal(self):
-        self.scope.write(":TRIG:MODE NORM")
+        self.scope.write(":TRIG:SWE NORM")
 
     # ---------- Screenshot / Setup ----------
 
@@ -287,10 +290,10 @@ class MainWindow(QWidget):
 
         set_item(0, 0, "RUN ↔ STOP")
         set_item(0, 1, "Preview")
-        set_item(0, 2, "TRIGGER NORMAL, SINGLE")
-        set_item(1, 0, "TRIGGER AUTO, RUN")
+        set_item(0, 2, "SINGLE, TRIGGER NORMAL")
+        set_item(1, 0, "RUN, TRIGGER AUTO")
         set_item(1, 1, "Save PNG + Setup")
-        set_item(1, 2, "TRIGGER AUTO, SINGLE")
+        set_item(1, 2, "SINGLE, FORCE TRIGGER")
 
         layout.addWidget(self.table)
 
@@ -498,19 +501,19 @@ class MainWindow(QWidget):
                     self.log_msg(f"Event {event}: RUN")
 
             elif event == "B1L":
-                self.scope.trigger_auto()
                 self.scope.run()
-                self.log_msg(f"Event {event}: TRIGGER AUTO, RUN")
+                self.scope.trigger_auto()
+                self.log_msg(f"Event {event}: RUN, TRIGGER AUTO")
 
             elif event == "B2S":
                 self.scope.trigger_normal()
                 self.scope.single()
-                self.log_msg(f"Event {event}: TRIGGER NORMAL, SINGLE")
+                self.log_msg(f"Event {event}: SINGLE, TRIGGER NORMAL")
 
             elif event == "B2L":
-                self.scope.trigger_auto()
                 self.scope.single()
-                self.log_msg(f"Event {event}: TRIGGER AUTO, SINGLE")
+                self.scope.trigger_force()
+                self.log_msg(f"Event {event}: SINGLE, TRIGGER FORCE")
 
             elif event == "BBS":
                 self.preview_screenshot()
