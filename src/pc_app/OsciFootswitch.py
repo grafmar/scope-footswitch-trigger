@@ -84,6 +84,14 @@ class ScopeController:
     def trigger_normal(self):
         self.scope.write(":TRIG:SWE NORM")
 
+    def is_running(self) -> bool:
+        try:
+            cond = int(self.scope.query(":OPER:COND?"))
+            return bool(cond & 0b1000)      # Bit 3
+        except Exception as e:
+            self.log_msg(f"Runstate error: {e}")
+            return self.running # Fallback: vorheriger Zustand
+
     # ---------- Screenshot / Setup ----------
 
     def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
@@ -152,6 +160,25 @@ class ScopeController:
         # --- Save as binary ---
         with open(filename, "wb") as f:
             f.write(data)
+
+    def write_setup(self, filename: str) -> bool:
+        try:
+            with open(filename, "rb") as f:
+                data = f.read()
+
+            # Binary Setup wiederherstellen
+            header = f"#{len(str(len(data)))}{len(data)}".encode()
+            payload = header + data
+
+            self.scope.write_termination = ''
+            self.scope.read_termination = ''
+            self.scope.write_raw(b":SYSTem:SETup " + payload)
+            self.scope.write_termination = '\n'
+            self.scope.read_termination = '\n'
+            return True
+        
+        except Exception as e:
+            return False
 
 # ----------------------------
 # Serial ports dropdown
@@ -465,24 +492,10 @@ class MainWindow(QWidget):
         )
         if not filename:
             return
-        try:
-            with open(filename, "rb") as f:
-                data = f.read()
-
-            # Binary Setup wiederherstellen
-            header = f"#{len(str(len(data)))}{len(data)}".encode()
-            payload = header + data
-
-            self.scope.write_termination = ''
-            self.scope.read_termination = ''
-            self.scope.write_raw(":SYSTem:SETup ", payload)
-            self.scope.write_termination = '\n'
-            self.scope.read_termination = '\n'
-
-            self.log_msg(f"Setup loaded: {filename}")
-
-        except Exception as e:
-            self.log_msg(f"Failed to load setup: {e}")
+        if self.scope.write_setup(filename):
+            self.log_msg(f"Setup loaded back: {filename}")
+        else:
+            self.log_msg(f"Failed to load setup: {filename}")
 
     # ---------- Event Handling ----------
 
@@ -493,7 +506,7 @@ class MainWindow(QWidget):
     def handle_event(self, event):
         try:
             if event == "B1S":
-                if self.scope.running:
+                if self.scope.is_running():
                     self.scope.stop()
                     self.log_msg(f"Event {event}: STOP")
                 else:
