@@ -1,6 +1,7 @@
 import sys
 import threading
 import queue
+import subprocess
 
 import serial
 import serial.tools.list_ports
@@ -18,6 +19,32 @@ from PySide6.QtGui import QPixmap, QFont
 
 from PIL import Image
 import io
+
+
+# ----------------------------
+# Version
+# ----------------------------
+
+APP_VERSION = "0.9"
+
+def get_git_version():
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+
+        count = subprocess.check_output(
+            ["git", "rev-list", "--count", "HEAD"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+
+        # return f"{APP_VERSION}.{count} ({commit})"
+        return f"{APP_VERSION}.{count}"
+    except:
+        return APP_VERSION
+
+VERSION = get_git_version()
 
 # ----------------------------
 # Serial Reader Thread
@@ -380,7 +407,7 @@ class SerialPortComboBox(QComboBox):
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Footswitch Oscilloscope Controller")
+        self.setWindowTitle(f"Footswitch Oscilloscope Controller  v{VERSION}")
 
         self.event_queue = queue.Queue()
         self.serial_thread = None
