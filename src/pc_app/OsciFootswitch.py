@@ -43,20 +43,59 @@ class SerialReader(threading.Thread):
         if self.ser:
             self.ser.close()
 
-# ----------------------------
-# Oscilloscope Controller
-# ----------------------------
-class ScopeController:
-    def __init__(self, log_callback=None):
-        self.rm = pyvisa.ResourceManager("@py")
-        self.scope = None
-        self.running = False
-        self.log = log_callback or (lambda msg: None)
 
-    def connect(self, ip):
-        self.scope = self.rm.open_resource(f"TCPIP0::{ip}::INSTR")
-        self.scope.timeout = 5000
-        return self.scope.query("*IDN?")
+# ============================================================
+# Oscilloscope Implementations
+# ============================================================
+
+# ----------------------------
+# Base Scope
+# ----------------------------
+class BaseScope:
+
+    def __init__(self, scope, log):
+        self.scope = scope
+        self.log = log
+        self.running = False
+
+    def identify(self, enable: bool):
+        raise NotImplementedError
+
+    def run(self):
+        raise NotImplementedError
+
+    def stop(self):
+        raise NotImplementedError
+
+    def single(self):
+        raise NotImplementedError
+
+    def trigger_auto(self):
+        raise NotImplementedError
+
+    def trigger_force(self):
+        raise NotImplementedError
+
+    def trigger_normal(self):
+        raise NotImplementedError
+
+    def is_running(self) -> bool:
+        return self.running
+
+    def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
+        raise NotImplementedError
+
+    def save_setup(self, filename: str):
+        raise NotImplementedError
+
+    def write_setup(self, filename: str) -> bool:
+        raise NotImplementedError
+
+
+# ----------------------------
+# Keysight / Agilent Scope
+# ----------------------------
+class KeysightScope(BaseScope):
 
     def identify(self, enable: bool):
         if enable:
@@ -89,17 +128,12 @@ class ScopeController:
             cond = int(self.scope.query(":OPER:COND?"))
             return bool(cond & 0b1000)      # Bit 3
         except Exception as e:
-            self.log_msg(f"Runstate error: {e}")
-            return self.running # Fallback: vorheriger Zustand
+            self.log(f"Runstate error: {e}")
+            return self.running
 
     # ---------- Screenshot / Setup ----------
 
     def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
-        """
-        color: True  -> COLor
-            False -> GRAYscale
-        inverted: True / False -> HARDcopy:INKSaver
-        """
 
         palette = "COLor" if color else "GRAYscale"
         inksaver = "ON" if inverted else "OFF"
@@ -114,7 +148,6 @@ class ScopeController:
         self.scope.write(f":HARDcopy:INKSaver {inksaver}")
 
         # ---------- Request screen dump ----------
-        # self.scope.write(f":DISPlay:DATA? PNG,SCReen,{palette}")
         self.scope.write(f":DISPlay:DATA? PNG,{palette}")
         raw = self.scope.read_raw()
 
@@ -132,8 +165,9 @@ class ScopeController:
             data = raw
 
         return data
-        
+
     def save_setup(self, filename: str):
+
         # --- Binary mode ---
         self.scope.write_termination = ''
         self.scope.read_termination = ''
@@ -175,10 +209,144 @@ class ScopeController:
             self.scope.write_raw(b":SYSTem:SETup " + payload)
             self.scope.write_termination = '\n'
             self.scope.read_termination = '\n'
+
             return True
-        
-        except Exception as e:
+
+        except Exception:
             return False
+
+
+# ----------------------------
+# LeCroy Scope
+# ----------------------------
+class LeCroyScope(BaseScope):
+
+    def identify(self, enable: bool):
+        if enable:
+            self.scope.write('MESSAGE "FOOT SWITCH IDENTIFIER"')
+        else:
+            self.scope.write('MESSAGE ""')
+
+    def run(self):
+        self.scope.write("TRIG_MODE AUTO")
+        self.running = True
+
+    def stop(self):
+        self.scope.write("TRIG_MODE STOP")
+        self.running = False
+
+    def single(self):
+        self.scope.write("TRIG_MODE SINGLE")
+
+    def trigger_auto(self):
+        self.scope.write("TRIG_MODE AUTO")
+
+    def trigger_force(self):
+        self.scope.write("FORCE_TRIGGER")
+
+    def trigger_normal(self):
+        self.scope.write("TRIG_MODE NORM")
+
+    def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
+
+        # ---------- Binary mode ----------
+        self.scope.write_termination = ''
+        self.scope.read_termination = ''
+        old_timeout = self.scope.timeout
+        self.scope.timeout = 10000
+
+        self.scope.write("HARDCOPY_SETUP DEV,PNG")
+        self.scope.write("SCREEN_DUMP")
+        raw = self.scope.read_raw()
+
+        # ---------- Restore ASCII mode ----------
+        self.scope.write_termination = '\n'
+        self.scope.read_termination = '\n'
+        self.scope.timeout = old_timeout
+
+        if raw.startswith(b"#"):
+            n = int(raw[1:2])
+            length = int(raw[2:2 + n])
+            data = raw[2 + n:2 + n + length]
+        else:
+            data = raw
+
+        return data
+
+    def save_setup(self, filename: str):
+        self.scope.write(f"STORE_PANEL '{filename}'")
+
+    def write_setup(self, filename: str) -> bool:
+        try:
+            self.scope.write(f"RECALL_PANEL '{filename}'")
+            return True
+        except Exception:
+            return False
+
+
+# ============================================================
+# Scope Controller (Factory + Delegation)
+# ============================================================
+
+class ScopeController:
+    def __init__(self, log_callback=None):
+        self.rm = pyvisa.ResourceManager("@py")
+        self.scope = None
+        self.device: BaseScope | None = None
+        self.log = log_callback or (lambda msg: None)
+
+    def connect(self, ip):
+
+        self.scope = self.rm.open_resource(f"TCPIP0::{ip}::INSTR")
+        self.scope.timeout = 5000
+
+        idn = self.scope.query("*IDN?")
+        idn_u = idn.upper()
+
+        if "LECROY" in idn_u:
+            self.device = LeCroyScope(self.scope, self.log)
+            self.log("Detected LeCroy oscilloscope")
+
+        else:
+            self.device = KeysightScope(self.scope, self.log)
+            self.log("Detected Keysight/Agilent oscilloscope")
+
+        return idn
+
+    # ---------- Delegation ----------
+
+    def identify(self, enable):
+        self.device.identify(enable)
+
+    def run(self):
+        self.device.run()
+
+    def stop(self):
+        self.device.stop()
+
+    def single(self):
+        self.device.single()
+
+    def trigger_auto(self):
+        self.device.trigger_auto()
+
+    def trigger_force(self):
+        self.device.trigger_force()
+
+    def trigger_normal(self):
+        self.device.trigger_normal()
+
+    def is_running(self):
+        return self.device.is_running()
+
+    def get_screenshot_png(self, color, inverted):
+        return self.device.get_screenshot_png(color, inverted)
+
+    def save_setup(self, filename):
+        self.device.save_setup(filename)
+
+    def write_setup(self, filename):
+        return self.device.write_setup(filename)
 
 # ----------------------------
 # Serial ports dropdown
@@ -191,6 +359,7 @@ class SerialPortComboBox(QComboBox):
     def showPopup(self):
         self.refresh_callback()
         super().showPopup()
+
 
 # ----------------------------
 # Main GUI
