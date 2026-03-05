@@ -7,7 +7,7 @@ import serial.tools.list_ports
 import pyvisa
 
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QLabel, QPushButton, QVBoxLayout,
+    QApplication, QLayout, QWidget, QLabel, QPushButton, QVBoxLayout,
     QHBoxLayout, QComboBox, QLineEdit, QCheckBox, QTextEdit,
     QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog,
     QSizePolicy, QGridLayout, QFrame
@@ -395,6 +395,7 @@ class MainWindow(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout()
+        layout.setHorizontalSizeConstraint(QLayout.SetMinimumSize)
 
         config_layout = QGridLayout()
         config_layout.setHorizontalSpacing(10)
@@ -448,9 +449,11 @@ class MainWindow(QWidget):
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
+        separator.setMaximumWidth(768)
         layout.addWidget(separator)
 
         # --- Footswitch Table ---
+        layout.addWidget(QLabel("Footswitch Functions:"))
         self.table = QTableWidget(2, 3)
         self.table.setHorizontalHeaderLabels(["B1 (Left)", "B1+B2 (Both)", "B2 (Right)"])
         self.table.setVerticalHeaderLabels(["Short", "Long"])
@@ -515,10 +518,13 @@ class MainWindow(QWidget):
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
+        separator.setMaximumWidth(768)
         layout.addWidget(separator)
 
         # --- Screenshot Controls ---
-        shot_layout = QHBoxLayout()
+        shot_widget = QWidget()
+        shot_widget.setFixedWidth(768)
+        shot_layout = QHBoxLayout(shot_widget)
 
         # Preview Screenshot
         self.preview_btn = QPushButton("Preview")
@@ -556,7 +562,7 @@ class MainWindow(QWidget):
         cb_layout.setSpacing(5)  # enger zusammen
         shot_layout.addLayout(cb_layout)
 
-        layout.addLayout(shot_layout)
+        layout.addWidget(shot_widget)
 
         # --- Preview Label ---
         self.image_label = QLabel()
@@ -568,8 +574,9 @@ class MainWindow(QWidget):
         # --- Log ---
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        self.log.setFixedHeight(6 * 20)  # 6 Zeilen à ca. 20px pro Zeile
-        self.log.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.log.setFixedWidth(768)
+        self.log.setMinimumHeight(6 * 20) # 6 Zeilen à ca. 20px pro Zeile
+        self.log.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         layout.addWidget(self.log)
 
         self.setLayout(layout)
