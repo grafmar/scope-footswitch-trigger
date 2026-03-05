@@ -16,6 +16,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QByteArray
 from PySide6.QtGui import QPixmap, QFont
 
+from PIL import Image
+import io
+
 # ----------------------------
 # Serial Reader Thread
 # ----------------------------
@@ -232,10 +235,15 @@ class LeCroyScope(BaseScope):
         self.running = True
 
     def stop(self):
+        # ACQUISITION STOP
+        # ACQUISITION TRIG_MODE, TRMD
+        # <mode> : = { AUTO, NORM, SINGLE, STOP}
         self.scope.write("TRIG_MODE STOP")
         self.running = False
 
     def single(self):
+        # ARM
+        # ACQUISITION ARM_ACQUISITION, ARM
         self.scope.write("TRIG_MODE SINGLE")
 
     def trigger_auto(self):
@@ -255,8 +263,8 @@ class LeCroyScope(BaseScope):
         old_timeout = self.scope.timeout
         self.scope.timeout = 10000
 
-        self.scope.write("HARDCOPY_SETUP DEV,PNG")
-        self.scope.write("SCREEN_DUMP")
+        self.scope.write("HARDCOPY_SETUP DEV,PNG")  # HCSU HARDCOPY_SETUP
+        self.scope.write("SCREEN_DUMP")             # SCDP SCREEN_DUMP
         raw = self.scope.read_raw()
 
         # ---------- Restore ASCII mode ----------
@@ -274,6 +282,7 @@ class LeCroyScope(BaseScope):
         return data
 
     def save_setup(self, filename: str):
+        # SAVE/RECALL SETUP PANEL_SETUP, PNSU
         self.scope.write(f"STORE_PANEL '{filename}'")
 
     def write_setup(self, filename: str) -> bool:
