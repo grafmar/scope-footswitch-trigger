@@ -307,9 +307,13 @@ class ScopeController:
             self.device = LeCroyScope(self.scope, self.log)
             self.log("Detected LeCroy oscilloscope")
 
-        else:
+        elif "KEYSIGHT" in idn_u or "AGILENT" in idn_u:
             self.device = KeysightScope(self.scope, self.log)
             self.log("Detected Keysight/Agilent oscilloscope")
+
+        else:
+            self.device = KeysightScope(self.scope, self.log)
+            self.log("Unknows oscilloscope. Using Keysight/Agilent commands as default.")
 
         return idn
 
