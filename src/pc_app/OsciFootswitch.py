@@ -39,8 +39,7 @@ def get_git_version():
             stderr=subprocess.DEVNULL
         ).decode().strip()
 
-        # return f"{APP_VERSION}.{count} ({commit})"
-        return f"{APP_VERSION}.{count}"
+        return f"{APP_VERSION} build {count} ({commit})"
     except:
         return APP_VERSION
 
