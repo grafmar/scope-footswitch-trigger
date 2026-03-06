@@ -257,66 +257,54 @@ class LeCroyScope(BaseScope):
             self.scope.write('MESSAGE ""')
 
     def run(self):
-        self.scope.write("TRIG_MODE AUTO")
+        self.scope.write("TRIG_MODE NORM")
         self.running = True
 
     def stop(self):
-        # ACQUISITION STOP
-        # ACQUISITION TRIG_MODE, TRMD
-        # <mode> : = { AUTO, NORM, SINGLE, STOP}
         self.scope.write("TRIG_MODE STOP")
         self.running = False
 
     def single(self):
-        # ARM
-        # ACQUISITION ARM_ACQUISITION, ARM
         self.scope.write("TRIG_MODE SINGLE")
 
     def trigger_auto(self):
         self.scope.write("TRIG_MODE AUTO")
 
     def trigger_force(self):
-        self.scope.write("FORCE_TRIGGER")
+        self.scope.write("TRIG_MODE AUTO")
+        self.scope.write("WAIT")
+        self.scope.write("TRIG_MODE STOP")
 
     def trigger_normal(self):
         self.scope.write("TRIG_MODE NORM")
 
     def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
+        bckg = "WHITE" if inverted else "BLACK"
 
-        # ---------- Binary mode ----------
-        self.scope.write_termination = ''
-        self.scope.read_termination = ''
-        old_timeout = self.scope.timeout
-        self.scope.timeout = 10000
+        # configure hardcopy for screenshot (TIFF, GPIB port, background color)
+        self.scope.write(f"HCSU DEV,TIFF,PORT,GPIB,BCKG,{bckg}")
 
-        self.scope.write("HARDCOPY_SETUP DEV,PNG")  # HCSU HARDCOPY_SETUP
-        self.scope.write("SCREEN_DUMP")             # SCDP SCREEN_DUMP
-        raw = self.scope.read_raw()
+        # trigger screenshot
+        self.scope.write("SCDP")
 
-        # ---------- Restore ASCII mode ----------
-        self.scope.write_termination = '\n'
-        self.scope.read_termination = '\n'
-        self.scope.timeout = old_timeout
+        # read binary data                                
+        data = self.scope.read_raw()
 
-        if raw.startswith(b"#"):
-            n = int(raw[1:2])
-            length = int(raw[2:2 + n])
-            data = raw[2 + n:2 + n + length]
-        else:
-            data = raw
+        # convert TIFF -> PNG
+        image = Image.open(io.BytesIO(data))
+        png_buffer = io.BytesIO()
+        image.save(png_buffer, format="PNG")
 
-        return data
+        return png_buffer.getvalue()
 
     def save_setup(self, filename: str):
         # SAVE/RECALL SETUP PANEL_SETUP, PNSU
-        self.scope.write(f"STORE_PANEL '{filename}'")
+        self.log(f"Unsupported on LeCroy scopes. Please use the front panel to save the setup as '{filename}' and load it back with the Load Setup button.")
+        #self.scope.write(f"STORE_PANEL '{filename}'")
 
     def write_setup(self, filename: str) -> bool:
-        try:
-            self.scope.write(f"RECALL_PANEL '{filename}'")
-            return True
-        except Exception:
-            return False
+        self.log(f"Unsupported on LeCroy scopes. Please use the front panel to save the setup as '{filename}' and load it back with the Load Setup button.")
+        return False
 
 
 # ============================================================
