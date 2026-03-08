@@ -2,11 +2,12 @@ import sys
 import threading
 import queue
 import subprocess
-
 import serial
 import serial.tools.list_ports
 import pyvisa
 
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPixmap, QFont
 from PySide6.QtWidgets import (
     QApplication, QLayout, QWidget, QLabel, QPushButton, QVBoxLayout,
     QHBoxLayout, QComboBox, QLineEdit, QCheckBox, QTextEdit,
@@ -14,11 +15,10 @@ from PySide6.QtWidgets import (
     QSizePolicy, QGridLayout, QFrame
 )
 
-from PySide6.QtCore import Qt, QTimer, QByteArray
-from PySide6.QtGui import QPixmap, QFont
-
-from PIL import Image
-import io
+# Oscilloscope Implementations
+from scopes.base import BaseScope
+from scopes.keysight import KeysightScope
+from scopes.lecroy import LeCroyScope
 
 
 # ----------------------------
@@ -70,281 +70,11 @@ class SerialReader(threading.Thread):
     def stop(self):
         self._running = False
         if self.ser:
+            try:
+                self.ser.cancel_read()
+            except:
+                pass
             self.ser.close()
-
-
-# ============================================================
-# Oscilloscope Implementations
-# ============================================================
-
-# ----------------------------
-# Base Scope
-# ----------------------------
-class BaseScope:
-
-    def __init__(self, scope, log):
-        self.scope = scope
-        self.log = log
-        self.running = False
-
-    def identify(self, enable: bool):
-        raise NotImplementedError
-
-    def run(self):
-        raise NotImplementedError
-
-    def stop(self):
-        raise NotImplementedError
-
-    def single(self):
-        raise NotImplementedError
-
-    def trigger_auto(self):
-        raise NotImplementedError
-
-    def trigger_force(self):
-        raise NotImplementedError
-
-    def trigger_normal(self):
-        raise NotImplementedError
-
-    def is_running(self) -> bool:
-        return self.running
-
-    def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
-        raise NotImplementedError
-
-    def save_setup(self, filename: str):
-        raise NotImplementedError
-
-    def write_setup(self, filename: str) -> bool:
-        raise NotImplementedError
-
-
-# ----------------------------
-# Keysight / Agilent Scope
-# ----------------------------
-class KeysightScope(BaseScope):
-
-    def identify(self, enable: bool):
-        if enable:
-            self.scope.write(':SYST:DSP "FOOT SWITCH\nIDENTIFIER"')
-        else:
-            self.scope.write(':SYST:DSP ""')
-
-    def run(self):
-        self.scope.write(":RUN")
-        self.running = True
-
-    def stop(self):
-        self.scope.write(":STOP")
-        self.running = False
-
-    def single(self):
-        self.scope.write(":SINGLE")
-
-    def trigger_auto(self):
-        self.scope.write(":TRIG:SWE AUTO")
-
-    def trigger_force(self):
-        self.scope.write(":TRIG:FORC")
-
-    def trigger_normal(self):
-        self.scope.write(":TRIG:SWE NORM")
-
-    def is_running(self) -> bool:
-        try:
-            cond = int(self.scope.query(":OPER:COND?"))
-            return bool(cond & 0b1000)      # Bit 3
-        except Exception as e:
-            self.log(f"Runstate error: {e}")
-            return self.running
-
-    # ---------- Screenshot / Setup ----------
-
-    def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
-
-        palette = "COLor" if color else "GRAYscale"
-        inksaver = "ON" if inverted else "OFF"
-
-        # ---------- Binary mode ----------
-        self.scope.write_termination = ''
-        self.scope.read_termination = ''
-        old_timeout = self.scope.timeout
-        self.scope.timeout = 10000
-
-        # ---------- Apply InkSaver ----------
-        self.scope.write(f":HARDcopy:INKSaver {inksaver}")
-
-        # ---------- Request screen dump ----------
-        self.scope.write(f":DISPlay:DATA? PNG,{palette}")
-        raw = self.scope.read_raw()
-
-        # ---------- Restore ASCII mode ----------
-        self.scope.write_termination = '\n'
-        self.scope.read_termination = '\n'
-        self.scope.timeout = old_timeout
-
-        # ---------- Strip IEEE-488.2 binary header ----------
-        if raw.startswith(b"#"):
-            n = int(raw[1:2])
-            length = int(raw[2:2 + n])
-            data = raw[2 + n:2 + n + length]
-        else:
-            data = raw
-
-        return data
-
-    def save_setup(self, filename: str):
-
-        # --- Binary mode ---
-        self.scope.write_termination = ''
-        self.scope.read_termination = ''
-        old_timeout = self.scope.timeout
-        self.scope.timeout = 5000
-
-        # --- Request setup ---
-        self.scope.write(":SYSTem:SETup?")
-        raw = self.scope.read_raw()
-
-        # --- Restore ASCII mode ---
-        self.scope.write_termination = '\n'
-        self.scope.read_termination = '\n'
-        self.scope.timeout = old_timeout
-
-        # --- Strip IEEE-488.2 binary header ---
-        if raw.startswith(b"#"):
-            n = int(raw[1:2])
-            length = int(raw[2:2 + n])
-            data = raw[2 + n:2 + n + length]
-        else:
-            data = raw
-
-        # --- Save as binary ---
-        with open(filename, "wb") as f:
-            f.write(data)
-
-    def write_setup(self, filename: str) -> bool:
-        try:
-            with open(filename, "rb") as f:
-                data = f.read()
-
-            # Binary Setup wiederherstellen
-            header = f"#{len(str(len(data)))}{len(data)}".encode()
-            payload = header + data
-
-            self.scope.write_termination = ''
-            self.scope.read_termination = ''
-            self.scope.write_raw(b":SYSTem:SETup " + payload)
-            self.scope.write_termination = '\n'
-            self.scope.read_termination = '\n'
-
-            return True
-
-        except Exception:
-            return False
-
-
-# ----------------------------
-# LeCroy Scope
-# ----------------------------
-class LeCroyScope(BaseScope):
-
-    def identify(self, enable: bool):
-        if enable:
-            self.scope.write('MESSAGE "FOOT SWITCH IDENTIFIER"')
-        else:
-            self.scope.write('MESSAGE ""')
-
-    def run(self):
-        self.scope.write("TRIG_MODE NORM")
-        self.running = True
-
-    def stop(self):
-        self.scope.write("TRIG_MODE STOP")
-        self.running = False
-
-    def single(self):
-        self.scope.write("TRIG_MODE SINGLE")
-
-    def trigger_auto(self):
-        self.scope.write("TRIG_MODE AUTO")
-
-    def trigger_force(self):
-        self.scope.write("TRIG_MODE AUTO")
-        self.scope.write("WAIT")
-        self.scope.write("TRIG_MODE STOP")
-
-    def trigger_normal(self):
-        self.scope.write("TRIG_MODE NORM")
-
-    def get_screenshot_png(self, color: bool, inverted: bool) -> bytes:
-        bckg = "WHITE" if inverted else "BLACK"
-
-        # configure hardcopy for screenshot (TIFF, GPIB port, background color)
-        self.scope.write(f"HCSU DEV,TIFF,PORT,GPIB,BCKG,{bckg}")
-
-        # trigger screenshot
-        self.scope.write("SCDP")
-
-        # read binary data                                
-        data = self.scope.read_raw()
-
-        # convert TIFF -> PNG
-        image = Image.open(io.BytesIO(data))
-        png_buffer = io.BytesIO()
-        image.save(png_buffer, format="PNG")
-
-        return png_buffer.getvalue()
-
-    def save_setup(self, filename: str):
-        # --- Binary mode ---
-        self.scope.write_termination = ''
-        self.scope.read_termination = ''
-        old_timeout = self.scope.timeout
-        self.scope.timeout = 5000
-
-        # --- Request setup ---
-        self.scope.write("PNSU?") # SAVE/RECALL SETUP PANEL_SETUP, PNSU
-        raw = self.scope.read_raw()
-
-        # --- Restore ASCII mode ---
-        self.scope.write_termination = '\n'
-        self.scope.read_termination = '\n'
-        self.scope.timeout = old_timeout
-
-        # --- Strip IEEE-488.2 binary header ---
-        if raw.startswith(b"#"):
-            n = int(raw[1:2])
-            length = int(raw[2:2 + n])
-            data = raw[2 + n:2 + n + length]
-        else:
-            data = raw
-
-        # --- Save as binary ---
-        with open(filename, "wb") as f:
-            f.write(data)
-
-
-    def write_setup(self, filename: str) -> bool:
-        try:
-            with open(filename, "rb") as f:
-                data = f.read()
-
-            # Binary Setup wiederherstellen
-            header = f"#{len(str(len(data)))}{len(data)}".encode()
-            payload = header + data
-
-            self.scope.write_termination = ''
-            self.scope.read_termination = ''
-            self.scope.write_raw(b"PNSU " + payload)
-            self.scope.write_termination = '\n'
-            self.scope.read_termination = '\n'
-
-            return True
-
-        except Exception:
-            return False
 
 # ============================================================
 # Scope Controller (Factory + Delegation)
@@ -375,43 +105,71 @@ class ScopeController:
 
         else:
             self.device = KeysightScope(self.scope, self.log)
-            self.log("Unknows oscilloscope. Using Keysight/Agilent commands as default.")
+            self.log("Unknown oscilloscope. Using Keysight/Agilent commands as default.")
 
         return idn
 
+    def _require_device(self) -> bool:
+        if not self.device:
+            self.log("Scope not connected")
+            return False
+        return True
+        
     # ---------- Delegation ----------
 
     def identify(self, enable):
+        if not self._require_device():
+            return
         self.device.identify(enable)
 
     def run(self):
+        if not self._require_device():
+            return
         self.device.run()
 
     def stop(self):
+        if not self._require_device():
+            return
         self.device.stop()
 
     def single(self):
+        if not self._require_device():
+            return
         self.device.single()
 
     def trigger_auto(self):
+        if not self._require_device():
+            return
         self.device.trigger_auto()
 
     def trigger_force(self):
+        if not self._require_device():
+            return
         self.device.trigger_force()
 
     def trigger_normal(self):
+        if not self._require_device():
+            return
         self.device.trigger_normal()
 
     def is_running(self):
+        if not self._require_device():
+            return False
         return self.device.is_running()
 
     def get_screenshot_png(self, color, inverted):
+        if not self._require_device():
+            return None
         return self.device.get_screenshot_png(color, inverted)
 
     def save_setup(self, filename):
+        if not self._require_device():
+            return
         self.device.save_setup(filename)
 
     def write_setup(self, filename):
+        if not self._require_device():
+            return False
         return self.device.write_setup(filename)
 
 # ----------------------------
@@ -444,7 +202,7 @@ class MainWindow(QWidget):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.process_events)
-        self.timer.start(100)
+        self.timer.start(50)
 
     def init_ui(self):
         layout = QVBoxLayout()
@@ -689,7 +447,9 @@ class MainWindow(QWidget):
                 color=self.color_cb.isChecked(),
                 inverted=self.invert_cb.isChecked(),
             )
-
+            if data is None:
+                return
+            
             self.update_preview_from_png(data)
             self.log_msg("Screenshot preview updated")
 
@@ -711,7 +471,9 @@ class MainWindow(QWidget):
                 color=self.color_cb.isChecked(),
                 inverted=self.invert_cb.isChecked(),
             )
-
+            if data is None:
+                return
+    
             # --- Preview aktualisieren ---
             self.update_preview_from_png(data)
 

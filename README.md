@@ -121,7 +121,7 @@ pyvisa==1.16.2
 * Build the EXE:
 
 ```bash
-pyinstaller --onefile --windowed --hidden-import=pyvisa_py .\OsciFootswitch.py
+pyinstaller --onefile --windowed --strip --clean --hidden-import=pyvisa_py --hidden-import=serial.tools.list_ports --hidden-import=PIL.Image OsciFootswitch.py
 ```
 
 → The EXE will be available at:
