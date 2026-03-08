@@ -31,6 +31,8 @@ This setup is ideal for lab environments where both hands are occupied — for e
 - Arduino firmware (button press detection: short / long press)
 - Python application (Serial + LAN/SCPI control)
 
+For LeCroy implementation this documentation has been used: (Waverunner Remote Control Manual)[https://cdn.teledynelecroy.com/files/manuals/wr2_rcm_revb.pdf]
+
 ## 🎯 Features
 - Detects short and long presses for both pedals
 - Remote oscilloscope control via LAN
@@ -75,8 +77,15 @@ The program starts significantly faster when run via the Python script.
 However, the required libraries must be installed first:
 
 ```bash
-pip install pyinstaller pyvisa pyserial PySide6
+pip install pyvisa pyserial PySide6 pillow
 ```
+
+Alternatively you can also just use the `requirements.txt` file:
+
+```bash
+pip install -r requirements.txt
+```
+
 
 → Start the program with:
 
@@ -88,23 +97,25 @@ For example, via `OsciFootswitch.bat`.
 
 ## Generating the EXE from the Python Script
 
-* Install the required libraries:
+* Install the required libraries as before and add the pyinstaller:
 
 ```bash
-pip install pyinstaller pyvisa pyserial PySide6
+pip install pyinstaller
 ```
 
-Used package versions:
+Used package versions (extracted with pipreqs and stored in `requirements.txt`):
+
+```bash
+pipreqs .
+```
 
 ```text
-pyinstaller==6.16.0
-pyinstaller-hooks-contrib==2025.9
-PyVISA==1.16.0
-PyVISA-py==0.8.1
+Pillow==12.1.1
 pyserial==3.5
-PySide6==6.10.1
-PySide6_Addons==6.10.1
-PySide6_Essentials==6.10.1
+pyside6==6.10.2
+pyside6_addons==6.10.2
+pyside6_essentials==6.10.2
+pyvisa==1.16.2
 ```
 
 * Build the EXE:
