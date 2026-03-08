@@ -1,5 +1,5 @@
 # Scope Footswitch Trigger
-![GitHub Release](https://img.shields.io/github/v/release/grafmar/scope-footswitch-trigger)
+[![GitHub Release](https://img.shields.io/github/v/release/grafmar/scope-footswitch-trigger)](https://github.com/grafmar/scope-footswitch-trigger/tags)
 [![GitHub License](https://img.shields.io/github/license/grafmar/scope-footswitch-trigger)](LICENSE)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![made-with-arduino](https://img.shields.io/badge/Made%20with-Arduino-00979D.svg)](https://www.arduino.org/)
