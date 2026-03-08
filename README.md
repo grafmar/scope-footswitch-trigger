@@ -2,8 +2,8 @@
 <!--
 ![GitHub Release](https://img.shields.io/github/v/release/grafmar/scope-footswitch-trigger)
 -->
-[![Prerelease](https://img.shields.io/badge/preRelease-0.9-orange.svg)](https://github.com/grafmar/scope-footswitch-trigger/tree/main/src)
-[![GitHub License](https://img.shields.io/github/license/grafmar/scope-footswitch-trigger)](LICENSE.txt)
+[![Prerelease](https://img.shields.io/badge/preRelease-0.9-orange.svg)](https://github.com/grafmar/scope-footswitch-trigger/tree/main/src/pc_app)
+[![GitHub License](https://img.shields.io/github/license/grafmar/scope-footswitch-trigger)](LICENSE)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![made-with-arduino](https://img.shields.io/badge/Made%20with-Arduino-00979D.svg)](https://www.arduino.org/)
 
