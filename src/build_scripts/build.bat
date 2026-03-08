@@ -17,4 +17,3 @@ if ERRORLEVEL 1 (
 )
 
 echo Build abgeschlossen! Ergebnisse in ../dist/OsciFootswitch
-pause
