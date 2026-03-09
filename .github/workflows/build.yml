@@ -28,7 +28,7 @@ jobs:
 
       - name: Zip build
         run: |
-          powershell Compress-Archive src/dist/OsciFootswitch OsciFootswitch.zip
+          powershell Compress-Archive src/build_scripts/dist/OsciFootswitch OsciFootswitch.zip
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
