@@ -1,4 +1,7 @@
 @echo off
+
+cd /d %~dp0\..\pc_app
+
 REM -------- Build OsciFootswitch --------
 REM 1. Version generieren
 python generate_version.py
