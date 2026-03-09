@@ -1,6 +1,7 @@
 name: Build Windows EXE
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -26,6 +27,9 @@ jobs:
           pip install -r src/pc_app/requirements.txt
           pip install pyinstaller
 
+      - name: Show installed packages
+        run: pip list
+        
       - name: Run build script
         run: src/build_scripts/build.bat
 
