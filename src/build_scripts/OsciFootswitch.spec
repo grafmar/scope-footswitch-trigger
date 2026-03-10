@@ -6,7 +6,7 @@ a = Analysis(
     ['../pc_app/OsciFootswitch.py'],
     pathex=[os.path.abspath('../pc_app')],
     binaries=[],
-    datas=[],
+    datas=[('../assets/icon.ico', '.')],
     hiddenimports=[
         'pyvisa_py',
         'serial.tools.list_ports',

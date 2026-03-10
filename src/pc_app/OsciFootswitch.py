@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 import queue
@@ -7,7 +8,7 @@ import serial.tools.list_ports
 import pyvisa
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QPixmap, QFont
+from PySide6.QtGui import QPixmap, QFont, QIcon
 from PySide6.QtWidgets import (
     QApplication, QLayout, QWidget, QLabel, QPushButton, QVBoxLayout,
     QHBoxLayout, QComboBox, QLineEdit, QCheckBox, QTextEdit,
@@ -185,12 +186,22 @@ class SerialPortComboBox(QComboBox):
         super().showPopup()
 
 
+
+# ----------------------------
+# path finder for assets (icon)
+# ----------------------------
+def resource_path(relative):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative)
+    return os.path.join(os.path.abspath("."), relative)
+
 # ----------------------------
 # Main GUI
 # ----------------------------
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowIcon(QIcon(resource_path("icon.ico")))
         self.setWindowTitle(f"Footswitch Oscilloscope Controller  v{VERSION}")
 
         self.event_queue = queue.Queue()
@@ -222,7 +233,7 @@ class MainWindow(QWidget):
         serial_label.setFixedWidth(label_width)
 
         # ---- Scope Row ----
-        self.ip_edit = QLineEdit("10.53.48.103")
+        self.ip_edit = QLineEdit("10.53.48.1")
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.clicked.connect(self.connect_scope)
 
