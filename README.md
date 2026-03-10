@@ -73,7 +73,9 @@ To compile the python to a windows-EXE file including all the necessary librarie
 
 
 ### 🏗️ SW-Architecture
-<!-- add image of GUI -->
+<p align="center">
+  <img src="doc/GUI.png" width="20%" title="GUI"  alt="GUI">
+</p>
 The GUI has the configuration part on the top, than a part that explains the footswitch function mapping. Afterward the screenshot section and on the bottom the log.
 
 On connection with the oscilloscopes IP the common SCPI/VISA identifier command `*IDN?` is used to identify the manufacturer and type of the oscilloscope. Depending on that identifier string the corresponding implementation for that oscilloscope is used. If the brand was not recognized the Keysight/Agilent implementation is used.
@@ -84,14 +86,21 @@ When a screenshot is captured, also a setup file is stored with the same basenam
 
 
 ### 📻 Supported Oscilloscopes
-- Keysight/Agilent 2000 series <!-- links to programmer guides -->
-- Keysight/Agilent 3000 series
-- Keysight/Agilent 4000 series
-- Keysight/Agilent 6000 series
-- Keysight/Agilent 7000 series
-- LeCroy Waverunner 6000 ( [Waverunner Remote Control Manual](https://cdn.teledynelecroy.com/files/manuals/wr2_rcm_revb.pdf) )
-- LeCroy Waverunner 44XI
+- ✅ Keysight/Agilent 2000 X-Series (DSOX2004A)
+- ✅ Keysight/Agilent 3000 X-Series (MSOX3054A)
+- ✅ Keysight/Agilent 4000 X-series (MSOX4024A)
+- ✅ Keysight/Agilent 6000 X-series (DSOX6004A)
+- ✅ Keysight/Agilent 7000 Series (MSO7054A)
+- ✅ LeCroy Waverunner 6100
+- ✅ LeCroy Waverunner 44XI
 
+SCPI/VISA Documentations:
+- [2000 X-Series Programmer's Guide](https://www.keysight.com/us/en/assets/9018-06893/programming-guides/9018-06893.pdf)
+- [3000 X-Series Programmer's Guide](https://www.keysight.com/us/en/assets/9018-06894/programming-guides/9018-06894.pdf)
+- [4000 X-Series Programmer's Guide](https://www.keysight.com/us/en/assets/9018-06976/programming-guides/9018-06976.pdf)
+- [6000 Series Programmer's Guide](https://www.keysight.com/ch/de/assets/9018-08107/programming-guides/9018-08107.pdf)
+- [7000A Series Programmer's Guide](https://www.keysight.com/us/en/assets/9018-06630/programming-guides/9018-06630.pdf)
+- [Waverunner Remote Control Manual](https://cdn.teledynelecroy.com/files/manuals/wr2_rcm_revb.pdf) 
 
 ## 🚀 Advantages and Example Use Cases
 - Hands-free operation → Trigger single acquisition while holding probes
