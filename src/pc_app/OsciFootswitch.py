@@ -25,7 +25,7 @@ from scopes.lecroy import LeCroyScope
 # Version
 # ----------------------------
 
-APP_VERSION = "0.9"
+APP_VERSION = "1.0"
 
 def get_git_version():
     try:
