@@ -1,4 +1,4 @@
-# Scope Footswitch Trigger
+# Scope Footswitch Trigger <img src="src/assets/icon.png" width="32px" title="Application icon"  alt="Application icon">
 [![GitHub Release](https://img.shields.io/github/v/release/grafmar/scope-footswitch-trigger)](https://github.com/grafmar/scope-footswitch-trigger/releases)
 [![GitHub License](https://img.shields.io/github/license/grafmar/scope-footswitch-trigger)](LICENSE)
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
@@ -12,7 +12,7 @@ This setup is ideal for lab environments where both hands are occupied — for e
 
 ## 🧪 Usage
 <p align="center">
-  <img src="doc/device_overview.png" width="80%" title="Device overview"  alt="accessibility text">
+  <img src="doc/device_overview.png" width="80%" title="Device overview"  alt="Device overview">
 </p>
 
 - Connect the dual footswitch to the PC via USB.
