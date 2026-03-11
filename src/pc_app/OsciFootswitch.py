@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 from scopes.base import BaseScope
 from scopes.keysight import KeysightScope
 from scopes.lecroy import LeCroyScope
+from scopes.hameg import HamegScope
 
 
 # ----------------------------
@@ -103,6 +104,10 @@ class ScopeController:
         elif "KEYSIGHT" in idn_u or "AGILENT" in idn_u:
             self.device = KeysightScope(self.scope, self.log)
             self.log("Detected Keysight/Agilent oscilloscope")
+
+        elif "HAMEG" in idn_u:
+            self.device = HamegScope(self.scope, self.log)
+            self.log("Detected Hameg/Rohde & Schwarz oscilloscope")
 
         else:
             self.device = KeysightScope(self.scope, self.log)

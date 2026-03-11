@@ -93,6 +93,8 @@ When a screenshot is captured, also a setup file is stored with the same basenam
 - ✅ Keysight/Agilent 7000 Series (MSO7054A)
 - ✅ LeCroy Waverunner 6100
 - ✅ LeCroy Waverunner 44XI
+- ❓ Hameg/R&S HMO3000 Series (HMO3524)
+
 
 SCPI/VISA Documentations:
 - [2000 X-Series Programmer's Guide](https://www.keysight.com/us/en/assets/9018-06893/programming-guides/9018-06893.pdf)
@@ -101,6 +103,8 @@ SCPI/VISA Documentations:
 - [6000 Series Programmer's Guide](https://www.keysight.com/ch/de/assets/9018-08107/programming-guides/9018-08107.pdf)
 - [7000A Series Programmer's Guide](https://www.keysight.com/us/en/assets/9018-06630/programming-guides/9018-06630.pdf)
 - [Waverunner Remote Control Manual](https://cdn.teledynelecroy.com/files/manuals/wr2_rcm_revb.pdf) 
+- [Hameg/R&S HMO3000 Series SCPI Programmers Manual](https://www.batronix.com/files/Rohde-%26-Schwarz/Oscilloscope/HMO30xx/HMO3000_ProgrammingManual_en.pdf)
+
 
 ## 🚀 Advantages and Example Use Cases
 - Hands-free operation → Trigger single acquisition while holding probes
