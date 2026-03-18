@@ -474,6 +474,10 @@ class MainWindow(QWidget):
 
     def save_screenshot_and_setup(self):
         try:
+            # Get window to front
+            self.showNormal()        # if minimized
+            self.raise_()
+            self.activateWindow()    # get focus
             filename, _ = QFileDialog.getSaveFileName(
                 self, "Save Screenshot", "", "PNG Image (*.png)"
             )
