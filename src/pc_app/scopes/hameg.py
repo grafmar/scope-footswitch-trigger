@@ -24,13 +24,13 @@ class HamegScope(BaseScope):
         self.scope.write(":SINGLE")
 
     def trigger_auto(self):
-        self.scope.write(":TRIG:MODE AUTO")
+        self.scope.write("TRIG:A:MODE AUTO")
 
     def trigger_force(self):
         self.scope.write("*TRG")
 
     def trigger_normal(self):
-        self.scope.write(":TRIG:MODE NORM")
+        self.scope.write("TRIG:A:MODE NORM")
 
     def is_running(self) -> bool:
         try:
@@ -68,15 +68,13 @@ class HamegScope(BaseScope):
         self.scope.read_termination = '\n'
         self.scope.timeout = old_timeout
 
-        """
         # ---------- Strip IEEE-488.2 binary header ----------
-         if raw.startswith(b"#"):
+        if raw.startswith(b"#"):
             n = int(raw[1:2])
             length = int(raw[2:2 + n])
             data = raw[2 + n:2 + n + length]
         else:
             data = raw
-        """
 
         return data
 
