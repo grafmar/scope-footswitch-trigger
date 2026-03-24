@@ -58,7 +58,8 @@ class HamegScope(BaseScope):
         self.scope.write(f"HCOPy:COLOR:SCHeme {colorScheme}")
 
         # ---------- Request screen dump ----------
-        self.scope.write(f"HCOPy:LANGuage PNG")
+        #self.scope.write(f"HCOPy:LANGuage PNG")
+        self.scope.write(f"HCOP:FORM PNG")
         self.scope.write(f"HCOPy:DATA?")
         
         raw = self.scope.read_raw()
