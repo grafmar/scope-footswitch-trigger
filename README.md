@@ -93,7 +93,7 @@ When a screenshot is captured, also a setup file is stored with the same basenam
 - ✅ Keysight/Agilent 7000 Series (MSO7054A)
 - ✅ LeCroy Waverunner 6100
 - ✅ LeCroy Waverunner 44XI
-- ❓ Hameg/R&S HMO3000 Series (HMO3524)
+- ❌ Hameg/R&S HMO3000 Series (HMO3524) [documentation](doc/HMO3524_documentation.md)
 
 
 SCPI/VISA Documentations:

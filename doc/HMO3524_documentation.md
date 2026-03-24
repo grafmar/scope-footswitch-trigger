@@ -75,7 +75,7 @@ Due to the limitations:
 ## Test Script
 
 Script used for testing:
-[```hameScpiChecker.py```](hameScpiChecker.py)
+[```hamegScpiChecker.py```](hamegScpiChecker.py)
 
 
 ---
