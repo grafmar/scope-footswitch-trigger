@@ -1,4 +1,5 @@
 from .base import BaseScope
+import pyvisa
 from PIL import Image
 import io
 
@@ -81,6 +82,7 @@ class LeCroyScope(BaseScope):
 
             # Send direct to device without any processing, as the setup file is already in the correct binary format
             self.scope.write_raw(data)
+            self.scope.flush(pyvisa.constants.VI_WRITE_BUF)
 
             self.scope.write_termination = '\n'
             self.scope.read_termination = '\n'

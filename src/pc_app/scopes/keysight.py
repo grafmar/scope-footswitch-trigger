@@ -1,4 +1,5 @@
 from .base import BaseScope
+import pyvisa
 
 
 # ----------------------------
@@ -110,6 +111,7 @@ class KeysightScope(BaseScope):
             self.scope.write_termination = ''
             self.scope.read_termination = ''
             self.scope.write_raw(b":SYSTem:SETup " + payload)
+            self.scope.flush(pyvisa.constants.VI_WRITE_BUF)
 
             self.scope.write_termination = '\n'
             self.scope.read_termination = '\n'
