@@ -16,7 +16,7 @@ This setup is ideal for lab environments where both hands are occupied — for e
 </p>
 
 - Connect the dual footswitch to the PC via USB.
-- Connect the oscilloscope to the network and optain its IP address (via Utility → I/O on the Keysight/Agilent oscilloscope).
+- Connect the oscilloscope to the network and obtain its IP address (via Utility → I/O on the Keysight/Agilent oscilloscope).
   - Activate VX11 on LeCroy oscilloscopes
 - Start `OsciFootswitch.exe` (or `python OsciFootswitch.py`).
 - Enter the oscilloscope’s IP address and click **\<Connect\>**.
@@ -53,19 +53,23 @@ This setup is ideal for lab environments where both hands are occupied — for e
 
 
 ## 🤖 Hardware
-A dual footswitch is connected to an Arduino Nano. The left switch connects to D3 and the right switch to D4 of the Arduino nano. The switches connect to GND.
+A dual footswitch is connected to an Arduino Nano. The left switch connects to D3 and the right switch to D4 of the Arduino Nano. The switches connect to GND.
 
-That's all allready for the Hardware. The Arduino is powered and connected to a PC through its USB connector.
+That's all for the hardware. The Arduino is powered and connected to a PC through its USB connector.
 
-The Arduino code `footswitch.ino` debounces the switch events, detects short and long presses and sends the according evnet string through USB-serial.
+The Arduino code `footswitch.ino` debounces the switch events, detects short and long presses and sends the corresponding event string through USB-serial.
+
+<p align="center">
+  <img src="doc/arduino_circuit.png" width="40%" title="Hardware circuit"  alt="Hardware circuit">
+</p>
 
 ## 👨‍💻 Software
-The PC Application is compiled from a python script. If  you want to adapt the code, you have to install several python packages, which are listed in `src/pc_app/requirement.txt`. You can apply them by:
+The PC application is compiled from a Ppython script. If you want to adapt the code, you have to install several Python packages, which are listed in `src/pc_app/requirements.txt`. You can apply them by:
 ```bash
 pip install -r requirements.txt
 ```
 
-To compile the python to a windows-EXE file including all the necessary libraries you can simply execute the batch file:
+To compile the Python to a Windows EXE file including all the necessary libraries you can simply execute the batch file:
 ```bash
 .\src\build_scripts\build.bat
 ```
@@ -76,13 +80,13 @@ To compile the python to a windows-EXE file including all the necessary librarie
 <p align="center">
   <img src="doc/GUI.png" width="20%" title="GUI"  alt="GUI">
 </p>
-The GUI has the configuration part on the top, than a part that explains the footswitch function mapping. Afterward the screenshot section and on the bottom the log.
+The GUI has the configuration part at the top, then a part that explains the footswitch function mappings. Below that is the screenshot section and at the bottom the log.
 
-On connection with the oscilloscopes IP the common SCPI/VISA identifier command `*IDN?` is used to identify the manufacturer and type of the oscilloscope. Depending on that identifier string the corresponding implementation for that oscilloscope is used. If the brand was not recognized the Keysight/Agilent implementation is used.
+Upon connecting to the oscilloscope's IP the common SCPI/VISA identifier command `*IDN?` is used to identify the manufacturer and type of the oscilloscope. Depending on that identifier string the corresponding implementation for that oscilloscope is used. If the brand is not recognized the Keysight/Agilent implementation is used.
 
-When the serial port of the footswitch is configured, the incomming events on the serial port are mapped to the corresponding oscilloscope functions and the SCPI/VISA commands are sent to the oscilloscope.
+When the serial port of the footswitch is configured, the incoming events on the serial port are mapped to the corresponding oscilloscope functions and the SCPI/VISA commands are sent to the oscilloscope.
 
-When a screenshot is captured, also a setup file is stored with the same basename. This setup file can than be reapplied to the scope later if needed.
+When a screenshot is captured, a setup file is also stored with the same basename. This setup file can then be reapplied to the scope later if needed.
 
 
 ### 📻 Supported Oscilloscopes
@@ -107,11 +111,11 @@ SCPI/VISA Documentations:
 
 
 ## 🚀 Advantages and Example Use Cases
-- Hands-free operation → Trigger single acquisition while holding probes
+- Hands-free operation → Trigger a single acquisition while holding probes
 - Quickly toggle between Auto and Normal trigger during debugging
 - Capture a screenshot including instrument setup without touching the scope
 - Improve workflow in production test environments
 - Minimal hardware cost
-- Works in background
-- No modification of oscillososcope required
+- Works in the background
+- No modification of the oscilloscope required
 - Fully scriptable and extendable
