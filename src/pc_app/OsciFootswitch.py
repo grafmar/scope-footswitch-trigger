@@ -26,7 +26,7 @@ from scopes.lecroy import LeCroyScope
 # Version
 # ----------------------------
 
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 
 def get_git_version():
     try:
@@ -163,15 +163,15 @@ class ScopeController:
             return None
         return self.device.get_screenshot_png(color, inverted)
 
-    def save_setup(self, filename):
+    def get_setup(self) -> bytes:
         if not self._require_device():
-            return
-        self.device.save_setup(filename)
+            return b""
+        return self.device.get_setup()
 
-    def write_setup(self, filename):
+    def write_setup_data(self, data: bytes) -> bool:
         if not self._require_device():
             return False
-        return self.device.write_setup(filename)
+        return self.device.write_setup_data(data)
 
 # ----------------------------
 # Serial ports dropdown
@@ -467,43 +467,52 @@ class MainWindow(QWidget):
         except Exception as e:
             self.log_msg(str(e))
 
+
     def save_screenshot_and_setup(self):
         try:
-            # Get window to front
-            self.showNormal()        # if minimized
-            self.raise_()
-            self.activateWindow()    # get focus
-            filename, _ = QFileDialog.getSaveFileName(
-                self, "Save Screenshot", "", "PNG Image (*.png)"
-            )
-            if not filename:
-                return
-            if not filename.lower().endswith(".png"):
-                filename += ".png"
-
-            # --- Screenshot EINMAL holen ---
-            data = self.scope.get_screenshot_png(
+            # Get Data from Scope
+            png_data = self.scope.get_screenshot_png(
                 color=self.color_cb.isChecked(),
                 inverted=self.invert_cb.isChecked(),
             )
-            if data is None:
+
+            setup_data = self.scope.get_setup()
+
+            if not png_data or not setup_data:
+                self.log_msg("Failed to acquire data from scope")
                 return
-    
-            # --- Preview aktualisieren ---
-            self.update_preview_from_png(data)
 
-            # --- PNG speichern ---
+            # Actualize Preview
+            self.update_preview_from_png(png_data)
+
+            # Dialog, Get window to front
+            self.showNormal()       # if minimized
+            self.raise_()
+            self.activateWindow()   # get focus
+
+            filename, _ = QFileDialog.getSaveFileName(
+                self, "Save Screenshot", "", "PNG Image (*.png)"
+            )
+
+            if not filename:
+                return
+
+            if not filename.lower().endswith(".png"):
+                filename += ".png"
+
+            # Save PNG + Setup
             with open(filename, "wb") as f:
-                f.write(data)
+                f.write(png_data)
 
-            # --- Setup speichern ---
             setup_file = filename.replace(".png", ".set")
-            self.scope.save_setup(setup_file)
+            with open(setup_file, "wb") as f:
+                f.write(setup_data)
 
-            self.log_msg(f"Saved screenshot and updated preview: {filename}")
+            self.log_msg(f"Saved screenshot + setup: {filename}")
 
         except Exception as e:
             self.log_msg(str(e))
+
 
     def load_setup(self):
         filename, _ = QFileDialog.getOpenFileName(
@@ -511,11 +520,19 @@ class MainWindow(QWidget):
         )
         if not filename:
             return
-        if self.scope.write_setup(filename):
-            self.log_msg(f"Setup loaded back: {filename}")
-        else:
-            self.log_msg(f"Failed to load setup: {filename}")
 
+        try:
+            with open(filename, "rb") as f:
+                data = f.read()
+
+            if self.scope.write_setup_data(data):
+                self.log_msg(f"Setup loaded back: {filename}")
+            else:
+                self.log_msg(f"Failed to load setup: {filename}")
+
+        except Exception as e:
+            self.log_msg(str(e))
+            
     # ---------- Event Handling ----------
 
     def process_events(self):

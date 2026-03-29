@@ -1,4 +1,5 @@
 from .base import BaseScope
+import pyvisa
 
 
 # ----------------------------
@@ -75,8 +76,7 @@ class KeysightScope(BaseScope):
 
         return data
 
-    def save_setup(self, filename: str):
-
+    def get_setup(self) -> bytes:
         # --- Binary mode ---
         self.scope.write_termination = ''
         self.scope.read_termination = ''
@@ -100,15 +100,10 @@ class KeysightScope(BaseScope):
         else:
             data = raw
 
-        # --- Save as binary ---
-        with open(filename, "wb") as f:
-            f.write(data)
+        return data
 
-    def write_setup(self, filename: str) -> bool:
+    def write_setup_data(self, data: bytes) -> bool:
         try:
-            with open(filename, "rb") as f:
-                data = f.read()
-
             # Binary Setup wiederherstellen
             header = f"#{len(str(len(data)))}{len(data)}".encode()
             payload = header + data
@@ -116,6 +111,8 @@ class KeysightScope(BaseScope):
             self.scope.write_termination = ''
             self.scope.read_termination = ''
             self.scope.write_raw(b":SYSTem:SETup " + payload)
+            self.scope.flush(pyvisa.constants.VI_WRITE_BUF)
+
             self.scope.write_termination = '\n'
             self.scope.read_termination = '\n'
 
