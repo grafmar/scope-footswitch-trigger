@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 # Oscilloscope Implementations
 from scopes.base import BaseScope
 from scopes.keysight import KeysightScope
+from scopes.keysight7000 import Keysight7000Scope
 from scopes.lecroy import LeCroyScope
 
 
@@ -26,7 +27,7 @@ from scopes.lecroy import LeCroyScope
 # Version
 # ----------------------------
 
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 
 def get_git_version():
     try:
@@ -101,8 +102,14 @@ class ScopeController:
             self.log("Detected LeCroy oscilloscope")
 
         elif "KEYSIGHT" in idn_u or "AGILENT" in idn_u:
-            self.device = KeysightScope(self.scope, self.log)
-            self.log("Detected Keysight/Agilent oscilloscope")
+            
+            if "MSO70" in idn_u or "DSO70" in idn_u:
+                self.device = Keysight7000Scope(self.scope, self.log)
+                self.log("Detected Keysight/Agilent 7000oscilloscope")
+
+            else:
+                self.device = KeysightScope(self.scope, self.log)
+                self.log("Detected Keysight/Agilent oscilloscope")
 
         else:
             self.device = KeysightScope(self.scope, self.log)

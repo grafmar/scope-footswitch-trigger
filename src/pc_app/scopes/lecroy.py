@@ -44,10 +44,11 @@ class LeCroyScope(BaseScope):
         self.scope.write(f"HCSU DEV,TIFF,PORT,GPIB,BCKG,{bckg}")
 
         # trigger screenshot
-        self.scope.write("SCDP")
-
-        # read binary data
-        data = self.scope.read_raw()
+        data = self.scope.query_binary_values(
+            "SCDP",
+            datatype='B',
+            container=bytes
+        )
 
         # convert TIFF -> PNG
         image = Image.open(io.BytesIO(data))
@@ -65,8 +66,11 @@ class LeCroyScope(BaseScope):
         self.scope.timeout = 5000
 
         # --- Request setup ---
-        self.scope.write("PNSU?") # SAVE/RECALL SETUP PANEL_SETUP, PNSU
-        raw = self.scope.read_raw()
+        raw = self.scope.query_binary_values( # SAVE/RECALL SETUP PANEL_SETUP, PNSU
+            "PNSU?",
+            datatype='B',
+            container=bytes
+        )
 
         # --- Restore ASCII mode ---
         self.scope.write_termination = '\n'

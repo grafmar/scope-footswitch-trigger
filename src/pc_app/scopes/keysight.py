@@ -58,8 +58,11 @@ class KeysightScope(BaseScope):
         self.scope.write(f":HARDcopy:INKSaver {inksaver}")
 
         # ---------- Request screen dump ----------
-        self.scope.write(f":DISPlay:DATA? PNG,{palette}")
-        raw = self.scope.read_raw()
+        raw = self.scope.query_binary_values(
+            f":DISPlay:DATA? PNG,{palette}",
+            datatype='B',
+            container=bytes
+        )
 
         # ---------- Restore ASCII mode ----------
         self.scope.write_termination = '\n'
@@ -84,8 +87,11 @@ class KeysightScope(BaseScope):
         self.scope.timeout = 5000
 
         # --- Request setup ---
-        self.scope.write(":SYSTem:SETup?")
-        raw = self.scope.read_raw()
+        raw = self.scope.query_binary_values(
+            ":SYSTem:SETup?",
+            datatype='B',
+            container=bytes
+        )
 
         # --- Restore ASCII mode ---
         self.scope.write_termination = '\n'
