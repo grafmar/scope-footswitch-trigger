@@ -336,6 +336,9 @@ class MainWindow(QWidget):
         set_item(1, 1, "Save PNG + Setup")
         set_item(1, 2, "SINGLE, FORCE TRIGGER")
 
+        # add click event to table cells
+        self.table.cellClicked.connect(self.footswitch_cell_clicked)
+
         layout.addWidget(self.table)
 
         # Tabelle fixieren (keine vertikale Skalierung)
@@ -581,6 +584,20 @@ class MainWindow(QWidget):
 
         except Exception as e:
             self.log_msg(str(e))
+
+    def footswitch_cell_clicked(self, row, column):
+        event_map = {
+            (0, 0): "B1S",
+            (1, 0): "B1L",
+            (0, 1): "BBS",
+            (1, 1): "BBL",
+            (0, 2): "B2S",
+            (1, 2): "B2L",
+        }
+
+        event = event_map.get((row, column))
+        if event:
+            self.handle_event(event)
 
     def log_msg(self, msg):
         self.log.append(msg)
