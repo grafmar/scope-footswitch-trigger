@@ -5,6 +5,7 @@ import queue
 import subprocess
 import serial
 import serial.tools.list_ports
+import time
 import pyvisa
 
 from PySide6.QtCore import Qt, QTimer
@@ -89,33 +90,74 @@ class ScopeController:
         self.device: BaseScope | None = None
         self.log = log_callback or (lambda msg: None)
 
+        # schützt VISA Zugriff gegen parallele Threads
+        self.lock = threading.Lock()
+
+        self.keep_alive_running = True
+        self.keep_alive_thread = threading.Thread(
+            target=self._keep_alive_loop,
+            daemon=True
+        )
+        self.keep_alive_thread.start()
+
     def connect(self, ip):
+        with self.lock:
+            self.scope = self.rm.open_resource(f"TCPIP0::{ip}::INSTR")
+            self.scope.timeout = 5000
 
-        self.scope = self.rm.open_resource(f"TCPIP0::{ip}::INSTR")
-        self.scope.timeout = 5000
+            idn = self.scope.query("*IDN?")
+            idn_u = idn.upper()
 
-        idn = self.scope.query("*IDN?")
-        idn_u = idn.upper()
+            if "LECROY" in idn_u:
+                self.device = LeCroyScope(self.scope, self.log)
+                self.log("Detected LeCroy oscilloscope")
 
-        if "LECROY" in idn_u:
-            self.device = LeCroyScope(self.scope, self.log)
-            self.log("Detected LeCroy oscilloscope")
+            elif "KEYSIGHT" in idn_u or "AGILENT" in idn_u:
+                
+                if "MSO70" in idn_u or "DSO70" in idn_u:
+                    self.device = Keysight7000Scope(self.scope, self.log)
+                    self.log("Detected Keysight/Agilent 7000oscilloscope")
 
-        elif "KEYSIGHT" in idn_u or "AGILENT" in idn_u:
-            
-            if "MSO70" in idn_u or "DSO70" in idn_u:
-                self.device = Keysight7000Scope(self.scope, self.log)
-                self.log("Detected Keysight/Agilent 7000oscilloscope")
+                else:
+                    self.device = KeysightScope(self.scope, self.log)
+                    self.log("Detected Keysight/Agilent oscilloscope")
 
             else:
                 self.device = KeysightScope(self.scope, self.log)
-                self.log("Detected Keysight/Agilent oscilloscope")
+                self.log("Unknown oscilloscope. Using Keysight/Agilent commands as default.")
 
-        else:
-            self.device = KeysightScope(self.scope, self.log)
-            self.log("Unknown oscilloscope. Using Keysight/Agilent commands as default.")
+            return idn
 
-        return idn
+    # ---------- Keep Alive ----------
+
+    def _keep_alive_loop(self):
+        while self.keep_alive_running:
+            time.sleep(10)
+            if self.scope is None:
+                continue
+            try:
+                with self.lock:
+                    self.scope.query("*IDN?")
+
+            except Exception as e:
+                self.log(f"Scope connection lost: {e}")
+                self._disconnect()
+
+    def _disconnect(self):
+        with self.lock:
+            try:
+                if self.scope:
+                    self.scope.close()
+
+            except Exception:
+                pass
+
+            self.scope = None
+            self.device = None
+
+        self.log("Scope disconnected")
+
+    # ---------- Device Check ----------
 
     def _require_device(self) -> bool:
         if not self.device:
@@ -128,58 +170,68 @@ class ScopeController:
     def identify(self, enable):
         if not self._require_device():
             return
-        self.device.identify(enable)
+        with self.lock:
+            self.device.identify(enable)
 
     def run(self):
         if not self._require_device():
             return
-        self.device.run()
+        with self.lock:
+            self.device.run()
 
     def stop(self):
         if not self._require_device():
             return
-        self.device.stop()
+        with self.lock:
+            self.device.stop()
 
     def single(self):
         if not self._require_device():
             return
-        self.device.single()
+        with self.lock:
+            self.device.single()
 
     def trigger_auto(self):
         if not self._require_device():
             return
-        self.device.trigger_auto()
+        with self.lock:
+            self.device.trigger_auto()
 
     def trigger_force(self):
         if not self._require_device():
             return
-        self.device.trigger_force()
+        with self.lock:
+            self.device.trigger_force()
 
     def trigger_normal(self):
-        if not self._require_device():
-            return
-        self.device.trigger_normal()
+        if self._require_device():
+            with self.lock:
+                self.device.trigger_normal()
 
     def is_running(self):
         if not self._require_device():
             return False
-        return self.device.is_running()
+        with self.lock:
+            return self.device.is_running()
 
     def get_screenshot_png(self, color, inverted):
         if not self._require_device():
             return None
-        return self.device.get_screenshot_png(color, inverted)
+        with self.lock:
+            return self.device.get_screenshot_png(color, inverted)
 
     def get_setup(self) -> bytes:
         if not self._require_device():
             return b""
-        return self.device.get_setup()
+        with self.lock:
+            return self.device.get_setup()
 
     def write_setup_data(self, data: bytes) -> bool:
         if not self._require_device():
             return False
-        return self.device.write_setup_data(data)
-
+        with self.lock:
+            return self.device.write_setup_data(data)
+        
 # ----------------------------
 # Serial ports dropdown
 # ----------------------------
@@ -543,6 +595,20 @@ class MainWindow(QWidget):
         except Exception as e:
             self.log_msg(str(e))
             
+    def footswitch_cell_clicked(self, row, column):
+        event_map = {
+            (0, 0): "B1S",
+            (1, 0): "B1L",
+            (0, 1): "BBS",
+            (1, 1): "BBL",
+            (0, 2): "B2S",
+            (1, 2): "B2L",
+        }
+
+        event = event_map.get((row, column))
+        if event:
+            self.handle_event(event)
+
     # ---------- Event Handling ----------
 
     def process_events(self):
@@ -584,20 +650,6 @@ class MainWindow(QWidget):
 
         except Exception as e:
             self.log_msg(str(e))
-
-    def footswitch_cell_clicked(self, row, column):
-        event_map = {
-            (0, 0): "B1S",
-            (1, 0): "B1L",
-            (0, 1): "BBS",
-            (1, 1): "BBL",
-            (0, 2): "B2S",
-            (1, 2): "B2L",
-        }
-
-        event = event_map.get((row, column))
-        if event:
-            self.handle_event(event)
 
     def log_msg(self, msg):
         self.log.append(msg)
