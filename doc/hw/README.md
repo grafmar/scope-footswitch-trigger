@@ -57,6 +57,9 @@ The following images show an example layout viewed from the top:
   <img src="pcb_layout.png" width="40%" title="PCB layout" alt="PCB layout">
   <img src="pcb_measurements.png" width="40%" title="PCB measurements" alt="PCB measurements">
 </p>
+<p align="center">
+  <img src="pcb_3d.png" width="40%" title="PCB 3D" alt="PCB 3D">
+</p>
 
 ## 3D-Printed Enclosure
 
