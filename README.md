@@ -55,7 +55,7 @@ This setup is ideal for lab environments where both hands are occupied — for e
 ## 🤖 Hardware
 A dual footswitch is connected to an Arduino Nano. The left switch connects to D3 and the right switch to D4 of the Arduino Nano. The switches connect to GND.
 
-That's all for the hardware. The Arduino is powered and connected to a PC through its USB connector.
+That's all for the hardware. The Arduino is powered and connected to a PC through its USB connector. [Detailed HW build](doc/hw/README.md) for more information.
 
 The Arduino code `footswitch.ino` debounces the switch events, detects short and long presses and sends the corresponding event string through USB-serial.
 
