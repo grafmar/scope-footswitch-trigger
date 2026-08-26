@@ -20,7 +20,11 @@ A custom 3D-printed enclosure houses the Arduino Nano and a small interface PCB 
 * Stripboard / veroboard, or a custom PCB
 * Wires
 * M3 bolts and nuts
-* Press-in threaded M3 inserts ([Bossard AG, 1386743, B3/BN1054](https://www.bossard.com/ch-en/eshop/threaded-inserts-for-press-in-for-plastic-materials/press-in-threaded-inserts-without-head-for-thermoplastics-and-thermosets/p/1054/))
+  * 4x M3x6 Cylinder Head
+  * 4x M3x20 Cylinder Head
+  * 2x M3x6 Lens Head
+  * 2x M3 Lock Nut
+* 8x Press-in threaded M3 inserts ([Bossard AG, 1386743, B3/BN1054](https://www.bossard.com/ch-en/eshop/threaded-inserts-for-press-in-for-plastic-materials/press-in-threaded-inserts-without-head-for-thermoplastics-and-thermosets/p/1054/))
 
 ## Interface PCB
 
@@ -72,6 +76,7 @@ For the PCB and housing screws, the screw holes are designed for M3 heat-set thr
   <img src="housing_threaded_insert_01.jpg" width="22%" title="Housing - Threaded Inserts Overview" alt="Housing - Threaded Inserts Overview">
   <img src="housing_threaded_insert_02.jpg" width="22%" title="Housing - Threaded Inserts Melting in" alt="Housing - Threaded Inserts Melting in">
   <img src="housing_threaded_insert_03.jpg" width="22%" title="Housing - Threaded Inserts Finished" alt="Housing - Threaded Inserts Finished">
+  <img src="screws_and_nuts.jpg" width="22%" title="Screws and Nuts" alt="Screws and Nuts">
 </p>
 
 
