@@ -20,6 +20,7 @@ A custom 3D-printed enclosure houses the Arduino Nano and a small interface PCB 
 * Stripboard / veroboard, or a custom PCB
 * Wires
 * M3 bolts and nuts
+* Press-in threaded M3 inserts ([Bossard AG, 1386743, B3/BN1054](https://www.bossard.com/ch-en/eshop/threaded-inserts-for-press-in-for-plastic-materials/press-in-threaded-inserts-without-head-for-thermoplastics-and-thermosets/p/1054/))
 
 ## Interface PCB
 
@@ -47,7 +48,7 @@ Both switches connect their respective Arduino input to GND when pressed.
 
 ### Stripboard Version
 
-The PCB can be built using a small piece of stripboard instead of a manufactured PCB.
+The PCB can be built using a small piece of stripboard instead of a manufactured PCB. Nevertheless, if you want a manufactured PCB, here is the [fabrication data](../../hw/FAB-Labor_ScopeFootswitchTrigger-A0.zip).
 
 When building the stripboard version, pay particular attention to the notch required for the screw that attaches the enclosure to the footswitch.
 
@@ -64,6 +65,15 @@ The following images show an example layout viewed from the top:
 ## 3D-Printed Enclosure
 
 The enclosure consists of a top and bottom part and is mounted directly to the footswitch using M3 bolts and nuts.
+
+For the PCB and housing screws, the screw holes are designed for M3 heat-set threaded inserts. These inserts can be installed by gently melting them into the plastic using a soldering iron.
+
+<p align="center">
+  <img src="housing_threaded_insert_01.jpg" width="22%" title="Housing - Threaded Inserts Overview" alt="Housing - Threaded Inserts Overview">
+  <img src="housing_threaded_insert_02.jpg" width="22%" title="Housing - Threaded Inserts Melting in" alt="Housing - Threaded Inserts Melting in">
+  <img src="housing_threaded_insert_03.jpg" width="22%" title="Housing - Threaded Inserts Finished" alt="Housing - Threaded Inserts Finished">
+</p>
+
 
 Before mounting the enclosure, the required holes in the footswitch need to be drilled. A 3D-printed drilling jig is provided to simplify this process.
 
